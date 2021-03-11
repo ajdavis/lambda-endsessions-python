@@ -1,4 +1,8 @@
-Jesse started this extension and Lambda function from https://github.com/aws-samples/aws-lambda-extensions/tree/main/python-example-extension
+Jesse started this extension and Lambda function from [Amazon's example](https://github.com/aws-samples/aws-lambda-extensions/tree/main/python-example-extension). It prototypes a method to ensure we end a MongoClient's sessions when its AWS Lambda runtime is shut down. Lambda functions cannot register a shutdown hook, but Lambda "extensions" can.
+
+The extension is a separate program from the Lambda function. We need a way for the Lambda function to record all the sessions its MongoClient has, so the extension can retrieve their ids and call `endSessions` when the runtime is shutting down. In this demo, the Lambda function saves the logical session ids in `/tmp/lsids.txt`. When the extension receives a shutdown event, it reads this file, creates a MongoClient, and uses the MongoClient to call `endSessions`.
+
+I don't know how to trigger a shutdown event for testing, so for now the extension executes its shutdown code on **all** events. The driver's session pool still appears to work--it reuses its most recent session id with each command--but in fact the session is deleted and recreated on the server with each Lambda function invocation.
 
 # Install AWS-CLI
 
