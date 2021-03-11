@@ -15,8 +15,10 @@ Run `aws configure`, paste the Access Key ID and Access Key from the downloaded 
 # Upload the extension
 
 ```
-python3 deploy.py
+python3 deploy.py --create
 ```
+
+For subsequent deploys, omit `--create`.
 
 You can see the uploaded extension as a "layer" at https://console.aws.amazon.com/lambda/home?region=us-east-1#/layers/python-example-extension/versions/1
 

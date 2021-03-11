@@ -9,6 +9,8 @@ import subprocess
 import tempfile
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--create', action='store_true',
+                    help="Pass this on the first deploy")
 parser.add_argument('--invoke', action='store_true',
                     help="Don't deploy, only invoke")
 args = parser.parse_args()
@@ -54,12 +56,41 @@ if not args.invoke:
     function_files = os.listdir('.')
     subprocess.check_call('pip3 install -q -r requirements.txt -t .'.split())
     subprocess.check_call('zip -q -r function.zip .'.split())
-    reply = subprocess.check_output(
-        'aws lambda update-function-code'
-        ' --function-name python-mongodb-session-close-test'
-        ' --region us-east-1'
-        ' --publish'
-        ' --zip-file fileb://function.zip'.split())
+    if args.create:
+        try:
+            # Does the role already exist?
+            reply = subprocess.check_output(
+                'aws iam get-role'
+                ' --role-name lambda-ex'.split(),
+                stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as exc:
+            if 'NoSuchEntity' in exc.output.decode():
+                reply = subprocess.check_output(
+                    'aws iam create-role'
+                    ' --role-name lambda-ex'
+                    ' --assume-role-policy-document'
+                    ' file://../trust-policy.json'.split())
+            else:
+                raise
+
+        reply_obj = json.loads(reply)
+        role_arn = reply_obj['Role']['Arn']
+        reply = subprocess.check_output(
+            f'aws lambda create-function'
+            f' --role {role_arn}'
+            f' --runtime python3.8'
+            f' --handler lambda_function.lambda_handler'
+            f' --function-name python-mongodb-session-close-test'
+            f' --region us-east-1'
+            f' --publish'
+            f' --zip-file fileb://function.zip'.split())
+    else:
+        reply = subprocess.check_output(
+            'aws lambda update-function-code'
+            ' --function-name python-mongodb-session-close-test'
+            ' --region us-east-1'
+            ' --publish'
+            ' --zip-file fileb://function.zip'.split())
 
     reply_obj = json.loads(reply)
     pprint.pprint(reply_obj)
